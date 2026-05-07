@@ -1,0 +1,278 @@
+{
+  "name": "n8n_workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "alert-system",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "3c3a2893-4697-47fb-9158-6f586073422f",
+      "name": "Webhook",
+      "webhookId": "001d32da-7dac-45bc-9f87-a223ee73fd87"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following report and determine the risk level. Return ONLY the word 'High' or 'Low'. Report: {{ $json.body.text }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        112,
+        0
+      ],
+      "id": "055e6528-2fe7-4585-bca8-b9f15daff1fc",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "46d8b5f9-7510-40d4-94fc-5568a7522e0d",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "High",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        400,
+        0
+      ],
+      "id": "ee4d73ab-c663-43a8-ae25-2ed5b8bae797",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\"Write ONE professional alert email for the Project Manager. Do not provide options or categories. Just provide the Final Subject and the Final Body. Risk Level: High. Recipient: {{ $node['Webhook'].json.body.recipient_email }}. Summary: {{ $node['Webhook'].json.body.json_data.summary }}\"",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        576,
+        -128
+      ],
+      "id": "90b18495-61d2-4dd8-83ce-9af83bfead73",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $node[\"Webhook\"].json.body.recipient_email }}",
+        "subject": "🚨 URGENT: High Risk Site Alert Detected",
+        "emailType": "text",
+        "message": "={{ $node[\"AI Agent1\"].json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        864,
+        -128
+      ],
+      "id": "135bee16-3b2d-4e24-b8fd-df1d190bc4e8",
+      "name": "Send a message",
+      "webhookId": "a44e3ef2-6d20-4c69-8c67-ea4e3bc6ae30",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "9v7eZDroqpIqnJRs",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemma-4-31b-it",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        576,
+        -288
+      ],
+      "id": "1670b54d-2d2c-4759-9448-384ad1e57e92",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "kk9M7dMX62YhWma6",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={\n  \"final_answer\": \"{{ $('AI Agent').item.json.output }}\",\n  \"status\": \"SENT\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1024,
+        -128
+      ],
+      "id": "d7228ce9-05f3-4dc9-885f-39212b39b168",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemma-4-31b-it",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        112,
+        208
+      ],
+      "id": "54777bec-341d-4dcb-adc2-a6e5522986b8",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "kk9M7dMX62YhWma6",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={\n  \"final_answer\": \"Risk is low\",\n  \"status\": \"No Mail Required\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        608,
+        96
+      ],
+      "id": "be1a1cf9-500a-4906-8e69-238a6b65bcf7",
+      "name": "Respond to Webhook1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5be7fdbc-48c6-48a5-9892-b6ef5ad38f26",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d196979b1c524cc77cbd3877bba5d6b80652959fac118392cd44ff180328b532"
+  },
+  "id": "d1OcNTf4TydMuJTK",
+  "tags": []
+}
